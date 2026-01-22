@@ -1,8 +1,115 @@
 const User = require("../../Model/Auth/User");
 const Otp = require("../../Model/Auth/Otp");
 const crypto = require("crypto");
+const sendOtpSms = require("../../utills/sendOtpSms");
 
-const normalizePhone = (p) => String(p || "").replace(/\D/g, "");
+
+// const normalizePhone = (p) => String(p || "").replace(/\D/g, "");
+
+// exports.saveUser = async (req, res) => {
+//   try {
+//     const phoneNumber = normalizePhone(req.body.phoneNumber);
+//     const { name, email, role } = req.body;
+
+//     if (!phoneNumber) {
+//       return res.status(400).json({ message: "Mobile number is required" });
+//     }
+
+//     const otp = String(crypto.randomInt(1000, 10000));
+//     const expiry = new Date(Date.now() + 2 * 60 * 1000);
+
+//     await Otp.findOneAndUpdate(
+//       { phoneNumber },
+//       { otp, expiry },
+//       { upsert: true, new: true, setDefaultsOnInsert: true }
+//     );
+
+//     const user = await User.findOne({ phoneNumber });
+
+//     return res.status(200).json({
+//       message: "OTP sent successfully",
+//       otp,
+//       isNewUser: !user,
+//       name,
+//       email,
+//       role,
+//     });
+//   } catch (err) {
+//     console.error("saveUser error:", err);
+//     return res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+// exports.verifyOTP = async (req, res) => {
+//   try {
+//     const phoneNumber = normalizePhone(req.body.phoneNumber);
+//     const otpInput = String(req.body.otp || "").trim();
+//     const { name, email, role } = req.body;
+
+//     if (!phoneNumber || !otpInput) {
+//       return res.status(400).json({
+//         message: "phoneNumber and otp are required",
+//       });
+//     }
+
+//     const record = await Otp.findOne({ phoneNumber });
+//     if (!record) {
+//       return res.status(400).json({
+//         message: "OTP not found. Please request a new one.",
+//       });
+//     }
+
+//     if (new Date(record.expiry) < new Date()) {
+//       await Otp.deleteOne({ _id: record._id });
+//       return res.status(400).json({ message: "OTP expired" });
+//     }
+
+//     if (String(record.otp) !== otpInput) {
+//       return res.status(400).json({ message: "Invalid OTP" });
+//     }
+
+//     await Otp.deleteOne({ _id: record._id });
+
+//     let user = await User.findOne({ phoneNumber });
+//     let isNewUser = false;
+
+//     if (!user) {
+//       if (!name || !email) {
+//         return res.status(400).json({
+//           message: "New user requires name and email",
+//         });
+//       }
+//       isNewUser = true;
+//       user = await User.create({
+//         phoneNumber,
+//         name,
+//         email,
+//         role,
+//         createdAt: new Date(),
+//         updatedAt: new Date(),
+//       });
+//     } else {
+//       user.updatedAt = new Date();
+//       await user.save();
+//     }
+
+//     return res.status(200).json({
+//       message: "OTP verified successfully",
+//       data: user,
+//       isNewUser,
+//     });
+//   } catch (err) {
+//     console.error("verifyOTP error:", err);
+//     return res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+const normalizePhone = (p) => {
+  let s = String(p || "").replace(/\D/g, "");
+  // keep last 10 digits for India numbers (handles +91 / 91 prefix)
+  if (s.length > 10) s = s.slice(-10);
+  return s;
+};
 
 exports.saveUser = async (req, res) => {
   try {
@@ -22,15 +129,19 @@ exports.saveUser = async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
+    // ✅ Actually send SMS
+    await sendOtpSms(phoneNumber, otp);
+
     const user = await User.findOne({ phoneNumber });
 
     return res.status(200).json({
       message: "OTP sent successfully",
-      otp,
       isNewUser: !user,
-      name,
-      email,
-      role,
+      // don’t send otp back
+      // you can send minimal fields if your UI needs them:
+      name: user?.name || name || "",
+      email: user?.email || email || "",
+      role: user?.role || role || "",
     });
   } catch (err) {
     console.error("saveUser error:", err);
@@ -45,16 +156,12 @@ exports.verifyOTP = async (req, res) => {
     const { name, email, role } = req.body;
 
     if (!phoneNumber || !otpInput) {
-      return res.status(400).json({
-        message: "phoneNumber and otp are required",
-      });
+      return res.status(400).json({ message: "phoneNumber and otp are required" });
     }
 
     const record = await Otp.findOne({ phoneNumber });
     if (!record) {
-      return res.status(400).json({
-        message: "OTP not found. Please request a new one.",
-      });
+      return res.status(400).json({ message: "OTP not found. Please request a new one." });
     }
 
     if (new Date(record.expiry) < new Date()) {
@@ -73,9 +180,7 @@ exports.verifyOTP = async (req, res) => {
 
     if (!user) {
       if (!name || !email) {
-        return res.status(400).json({
-          message: "New user requires name and email",
-        });
+        return res.status(400).json({ message: "New user requires name and email" });
       }
       isNewUser = true;
       user = await User.create({
