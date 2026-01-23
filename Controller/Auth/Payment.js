@@ -2,10 +2,16 @@ const mongoose = require("mongoose");
 const Booking = require("../../Model/Auth/Payment");
 const Profile = require("../../Model/Auth/Profile");
 const User = require("../../Model/Auth/User");
+const Razorpay = require("razorpay");
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const OPEN_HOUR = 9;
 const CLOSE_HOUR = 21;
+
+const razorpay = new Razorpay({
+  key_id: "rzp_test_JOC0wRKpLH1cVW",
+  key_secret: " 9EzSlxvJbTyQ2Hg0Us5ZX4VD",
+});
 
 const toId = (v) =>
   mongoose.Types.ObjectId.isValid(v) ? new mongoose.Types.ObjectId(v) : v;
@@ -45,7 +51,7 @@ async function hasOverlap(profileId, start, end) {
   return !!clash;
 }
 
-exports.createBooking = async (req, res) => {
+exports.createRazorpayOrderAndBooking = async (req, res) => {
   try {
     const {
       userId,
@@ -55,7 +61,6 @@ exports.createBooking = async (req, res) => {
       mode,
       amount = 500,
       currency = "INR",
-      status,
       date,
     } = req.body;
 
@@ -71,6 +76,12 @@ exports.createBooking = async (req, res) => {
         .json({ success: false, message: "mode must be 'chat' or 'call'" });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(profileId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid userId/profileId" });
+    }
+
     const valid = validateSlotWindow(start, end);
     if (!valid.ok) {
       return res.status(400).json({ success: false, message: valid.msg });
@@ -83,31 +94,201 @@ exports.createBooking = async (req, res) => {
         .json({ success: false, message: "Slot already taken" });
     }
 
-    const finalStatus =
-      status && ["pending", "success", "failed", "cancelled"].includes(status)
-        ? status
-        : "pending";
+    // (Optional) ensure profile exists
+    const prof = await Profile.findById(profileId).select("_id").lean();
+    if (!prof) {
+      return res.status(404).json({ success: false, message: "Profile not found" });
+    }
 
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid amount" });
+    }
+
+    // Razorpay amount is in paise
+    const amountPaise = Math.round(amt * 100);
+
+    const receipt = `bk_${Date.now()}_${String(profileId).slice(-6)}`;
+
+    // ✅ Create Razorpay order
+    const order = await razorpay.orders.create({
+      amount: amountPaise,
+      currency,
+      receipt,
+      notes: {
+        userId: String(userId),
+        profileId: String(profileId),
+        mode,
+      },
+    });
+
+    // ✅ Create booking as pending, store orderId
     const booking = await Booking.create({
       userId,
       profileId,
       start: valid.start,
       end: valid.end,
       mode,
-      amount,
+      amount: amt,
       currency,
-      status: finalStatus,
+      status: "pending",
       date,
+      payment: {
+        gateway: "razorpay",
+        orderId: order.id,
+        raw: order,
+      },
     });
 
-    return res.status(201).json({ success: true, booking });
+    return res.status(201).json({
+      success: true,
+      booking,
+      razorpay: {
+        keyId: process.env.RAZORPAY_KEY_ID, // safe to send keyId to frontend
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+      },
+    });
   } catch (err) {
-    console.error("createBooking error", err);
+    console.error("createRazorpayOrderAndBooking error", err);
     return res
       .status(500)
       .json({ success: false, message: err.message || "Server error" });
   }
 };
+
+exports.verifyRazorpayAndMarkBooking = async (req, res) => {
+  try {
+    const { bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+      req.body;
+
+    if (!bookingId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({
+        success: false,
+        message: "bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({ success: false, message: "Invalid bookingId" });
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    if (booking.payment?.gateway !== "razorpay") {
+      return res.status(400).json({ success: false, message: "Not a Razorpay booking" });
+    }
+
+    // ✅ Ensure order_id matches the booking
+    if (booking.payment?.orderId !== razorpay_order_id) {
+      return res.status(400).json({ success: false, message: "OrderId mismatch" });
+    }
+
+    // ✅ Verify signature
+    const expected = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    if (expected !== razorpay_signature) {
+      // mark failed
+      booking.status = "failed";
+      booking.payment = {
+        ...booking.payment,
+        paymentId: razorpay_payment_id,
+        signature: razorpay_signature,
+        raw: { ...(booking.payment?.raw || {}), verify: "failed" },
+      };
+      await booking.save();
+
+      return res.status(400).json({ success: false, message: "Signature verification failed" });
+    }
+
+    // ✅ Mark success
+    booking.status = "success";
+    booking.payment = {
+      ...booking.payment,
+      paymentId: razorpay_payment_id,
+      signature: razorpay_signature,
+      raw: { ...(booking.payment?.raw || {}), verify: "success" },
+    };
+
+    await booking.save();
+
+    return res.status(200).json({ success: true, booking });
+  } catch (err) {
+    console.error("verifyRazorpayAndMarkBooking error", err);
+    return res.status(500).json({ success: false, message: err.message || "Server error" });
+  }
+};
+
+// exports.createBooking = async (req, res) => {
+//   try {
+//     const {
+//       userId,
+//       profileId,
+//       start,
+//       end,
+//       mode,
+//       amount = 500,
+//       currency = "INR",
+//       status,
+//       date,
+//     } = req.body;
+
+//     if (!userId || !profileId || !start || !end || !mode) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Missing fields" });
+//     }
+
+//     if (!["chat", "call"].includes(mode)) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "mode must be 'chat' or 'call'" });
+//     }
+
+//     const valid = validateSlotWindow(start, end);
+//     if (!valid.ok) {
+//       return res.status(400).json({ success: false, message: valid.msg });
+//     }
+
+//     const overlap = await hasOverlap(profileId, valid.start, valid.end);
+//     if (overlap) {
+//       return res
+//         .status(409)
+//         .json({ success: false, message: "Slot already taken" });
+//     }
+
+//     const finalStatus =
+//       status && ["pending", "success", "failed", "cancelled"].includes(status)
+//         ? status
+//         : "pending";
+
+//     const booking = await Booking.create({
+//       userId,
+//       profileId,
+//       start: valid.start,
+//       end: valid.end,
+//       mode,
+//       amount,
+//       currency,
+//       status: finalStatus,
+//       date,
+//     });
+
+//     return res.status(201).json({ success: true, booking });
+//   } catch (err) {
+//     console.error("createBooking error", err);
+//     return res
+//       .status(500)
+//       .json({ success: false, message: err.message || "Server error" });
+//   }
+// };
 
 exports.markBookingStatus = async (req, res) => {
   try {
@@ -294,46 +475,7 @@ exports.getContactForUserProfile = async (req, res) => {
   }
 };
 
-// exports.getProfileByUserId = async (req, res) => {
-//   try {
-//     const { userId } = req.params;
 
-//     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "Valid userId required" });
-//     }
-
-//     const booking = await Booking.findOne({ userId })
-//       .sort({ createdAt: -1 })
-//       .lean();
-
-//     if (!booking) {
-//       return res
-//         .status(404)
-//         .json({ success: false, message: "No booking found for this user" });
-//     }
-
-//     const profile = await Profile.findById(booking.profileId).lean();
-
-//     if (!profile) {
-//       return res
-//         .status(404)
-//         .json({ success: false, message: "Profile not found" });
-//     }
-
-//     return res.status(200).json({
-//       success: true,
-//       booking,
-//       profile,
-//     });
-//   } catch (err) {
-//     console.error("getProfileByUserId error", err);
-//     return res
-//       .status(500)
-//       .json({ success: false, message: err.message || "Server error" });
-//   }
-// };
 
 exports.getProfileByUserId = async (req, res) => {
   try {
@@ -382,48 +524,7 @@ exports.getProfileByUserId = async (req, res) => {
   }
 };
 
-// exports.getUserAndBookings = async (req, res) => {
-//   try {
-//     const { userId } = req.params;
 
-//     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "Valid userId required" });
-//     }
-
-//     const user = await User.findById(userId).lean();
-//     if (!user) {
-//       return res
-//         .status(404)
-//         .json({ success: false, message: "User not found" });
-//     }
-
-//     const bookings = await Booking.find({ userId })
-//       .sort({ createdAt: -1 })
-//       .lean();
-
-//     const bookingsWithProfile = await Promise.all(
-//       bookings.map(async (b) => {
-//         const profile = await Profile.findById(b.profileId)
-//           .select("business.displayName media.profilePhotoUrl")
-//           .lean();
-//         return { ...b, profile };
-//       })
-//     );
-
-//     return res.status(200).json({
-//       success: true,
-//       user,
-//       bookings: bookingsWithProfile,
-//     });
-//   } catch (err) {
-//     console.error("getUserAndBookings error", err);
-//     return res
-//       .status(500)
-//       .json({ success: false, message: err.message || "Server error" });
-//   }
-// };
 
 exports.getUserAndBookings = async (req, res) => {
   try {

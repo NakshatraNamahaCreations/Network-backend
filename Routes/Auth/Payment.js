@@ -12,9 +12,11 @@ const {
   getProfileByUserId,
   getUserAndBookings,
   getAllBookingsWithUserAndProfile,
+  createRazorpayOrderAndBooking,
+  verifyRazorpayAndMarkBooking
 } = require("../../Controller/Auth/Payment");
 
-router.post("/create", createBooking);
+// router.post("/create", createBooking);
 
 router.post("/status", markBookingStatus);
 
@@ -26,5 +28,8 @@ router.get("/contact/:profileId", getContactForUserProfile);
 router.get("/profile/:userId", getProfileByUserId);
 router.get("/user-bookings/:profileId", getUserAndBookings);
 router.get("/allbooking", getAllBookingsWithUserAndProfile);
+router.post("/razorpay/create-order", createRazorpayOrderAndBooking);
+router.post("/razorpay/verify", verifyRazorpayAndMarkBooking);
+
 
 module.exports = router;
