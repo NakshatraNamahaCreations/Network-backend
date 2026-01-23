@@ -8,9 +8,11 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
 const OPEN_HOUR = 9;
 const CLOSE_HOUR = 21;
 
+
+
 const razorpay = new Razorpay({
-  key_id: "rzp_test_JOC0wRKpLH1cVW",
-  key_secret: " 9EzSlxvJbTyQ2Hg0Us5ZX4VD",
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 const toId = (v) =>
