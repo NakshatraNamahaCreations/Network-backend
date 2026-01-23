@@ -3,6 +3,7 @@ const Booking = require("../../Model/Auth/Payment");
 const Profile = require("../../Model/Auth/Profile");
 const User = require("../../Model/Auth/User");
 const Razorpay = require("razorpay");
+const crypto = require("crypto");
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const OPEN_HOUR = 9;
