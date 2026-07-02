@@ -189,6 +189,35 @@ exports.verifyProfile = async (req, res) => {
   }
 };
 
+exports.toggleProfileStatus = async (req, res) => {
+  try {
+    const { profileId } = req.params;
+    const profile = await Profile.findById(profileId);
+    if (!profile) return res.status(404).json({ success: false, message: "Profile not found" });
+
+    profile.profilestatus = !profile.profilestatus;
+    await profile.save();
+
+    await Notification.create({
+      userId: profile.userId,
+      type: "profile_approved",
+      title: profile.profilestatus ? "Profile Activated ✅" : "Profile Deactivated ⏸",
+      body: profile.profilestatus
+        ? "Your profile is now active and visible to users."
+        : "Your profile has been temporarily deactivated by admin.",
+      relatedId: String(profileId),
+    });
+
+    return res.status(200).json({
+      success: true,
+      profilestatus: profile.profilestatus,
+      message: profile.profilestatus ? "Profile activated" : "Profile deactivated",
+    });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
 // ── Category Management ───────────────────────────────────────────────────────
 exports.addCategory = async (req, res) => {
   try {

@@ -2,6 +2,7 @@ const express = require("express");
 const {
   AdminUserSignup, AdminUserSignin, AdmingetAlluser, getDashboardStats,
   getPendingProfiles, getAllProfilesAdmin, approveProfile, rejectProfile, verifyProfile,
+  toggleProfileStatus,
   addCategory, getAllCategories, updateCategory, deleteCategory,
   getAllBookings,
 } = require("../../Controller/Auth/Admin");
@@ -24,6 +25,7 @@ router.get("/profiles", getAllProfilesAdmin);
 router.put("/profiles/:profileId/approve", approveProfile);
 router.put("/profiles/:profileId/reject", rejectProfile);
 router.put("/profiles/:profileId/verify", verifyProfile);
+router.put("/profiles/:profileId/toggle-status", toggleProfileStatus);
 
 // Categories
 router.get("/categories", getAllCategories);
