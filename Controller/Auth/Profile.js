@@ -196,12 +196,36 @@ exports.discoverProfiles = async (req, res) => {
 exports.getProfileById = async (req, res) => {
   try {
     const { id } = req.params;
+    const { viewerId } = req.query;
+
     if (!mongoose.isValidObjectId(id))
       return res.status(400).json({ error: "Invalid id" });
+
     const profile = await Profile.findById(id).populate("category", "name icon");
     if (!profile) return res.status(404).json({ error: "Profile not found" });
+
     await Profile.findByIdAndUpdate(id, { $inc: { viewCount: 1 } });
-    return res.status(200).json(profile);
+
+    // Check if the viewer has an active subscription
+    let isSubscribed = false;
+    if (viewerId && mongoose.isValidObjectId(viewerId)) {
+      const Subscription = require("../../Model/Auth/Subscription");
+      await Subscription.updateMany(
+        { userId: viewerId, status: "active", endDate: { $lt: new Date() } },
+        { status: "expired" }
+      );
+      const sub = await Subscription.findOne({ userId: viewerId, status: "active" });
+      isSubscribed = !!sub;
+    }
+
+    // Strip contact fields for non-subscribers
+    const data = profile.toObject();
+    if (!isSubscribed) {
+      delete data.mobile;
+      delete data.email;
+    }
+
+    return res.status(200).json({ profile: data, isSubscribed });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

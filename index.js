@@ -32,6 +32,7 @@ app.use("/api/like",         require("./Routes/Auth/Like"));
 app.use("/api/block",        require("./Routes/Auth/Block"));
 app.use("/api/notification", require("./Routes/Auth/Notification"));
 app.use("/api/plan",         require("./Routes/Auth/Plan"));
+app.use("/api/subscription", require("./Routes/Auth/Subscription"));
 
 const PORT = process.env.CONTENT_PORT || 8080;
 const MONGO_URI = process.env.CONTENT_MONGO_URI;

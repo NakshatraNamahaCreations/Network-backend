@@ -2,7 +2,7 @@ const Plan = require("../../Model/Auth/Plan");
 
 exports.createPlan = async (req, res) => {
   try {
-    const { name, price, sortOrder } = req.body;
+    const { name, price, description, durationDays, sortOrder } = req.body;
     if (!name || price === undefined)
       return res.status(400).json({ success: false, message: "name and price are required" });
 
@@ -11,9 +11,11 @@ exports.createPlan = async (req, res) => {
       return res.status(400).json({ success: false, message: "Plan with this name already exists" });
 
     const plan = await Plan.create({
-      name: name.trim(),
-      price: Number(price),
-      sortOrder: sortOrder || 0,
+      name:         name.trim(),
+      price:        Number(price),
+      description:  description ? description.trim() : "",
+      durationDays: durationDays ? Number(durationDays) : 30,
+      sortOrder:    sortOrder || 0,
     });
     return res.status(201).json({ success: true, plan });
   } catch (err) {
@@ -45,13 +47,15 @@ exports.getPlanById = async (req, res) => {
 exports.updatePlan = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, isActive, sortOrder } = req.body;
+    const { name, price, description, durationDays, isActive, sortOrder } = req.body;
 
     const update = {};
-    if (name !== undefined)      update.name      = name.trim();
-    if (price !== undefined)     update.price     = Number(price);
-    if (isActive !== undefined)  update.isActive  = isActive;
-    if (sortOrder !== undefined) update.sortOrder = sortOrder;
+    if (name !== undefined)         update.name         = name.trim();
+    if (price !== undefined)        update.price        = Number(price);
+    if (description !== undefined)  update.description  = description.trim();
+    if (durationDays !== undefined) update.durationDays = Number(durationDays);
+    if (isActive !== undefined)     update.isActive     = isActive;
+    if (sortOrder !== undefined)    update.sortOrder    = sortOrder;
 
     const plan = await Plan.findByIdAndUpdate(id, update, { new: true });
     if (!plan) return res.status(404).json({ success: false, message: "Plan not found" });
