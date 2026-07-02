@@ -13,8 +13,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
-// Static uploads
-app.use("/uploads", express.static("uploads"));
+// Static uploads — absolute path + explicit CORS headers for cross-origin img src
+app.use("/uploads", (req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  next();
+}, express.static(require("path").join(__dirname, "uploads")));
 
 // Routes
 app.use("/api/user",         require("./Routes/Auth/User"));
@@ -28,6 +31,7 @@ app.use("/api/review",       require("./Routes/Auth/Review"));
 app.use("/api/like",         require("./Routes/Auth/Like"));
 app.use("/api/block",        require("./Routes/Auth/Block"));
 app.use("/api/notification", require("./Routes/Auth/Notification"));
+app.use("/api/plan",         require("./Routes/Auth/Plan"));
 
 const PORT = process.env.CONTENT_PORT || 8080;
 const MONGO_URI = process.env.CONTENT_MONGO_URI;
