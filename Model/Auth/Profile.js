@@ -1,20 +1,7 @@
 const mongoose = require("mongoose");
 
 const photoSchema = new mongoose.Schema(
-  {
-    url: { type: String, required: true },
-    caption: { type: String, default: "" },
-  },
-  { _id: false }
-);
-
-const clientSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true, trim: true },
-    website: { type: String, default: "" },
-    logoUrl: { type: String, default: "" },
-    summary: { type: String, default: "" },
-  },
+  { url: { type: String, required: true } },
   { _id: false }
 );
 
@@ -50,87 +37,82 @@ const profileSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "user",
       required: true,
-      index: true,
       unique: true,
+      index: true,
     },
 
-    media: {
-      logoUrl: { type: String, default: "" },
-      profilePhotoUrl: { type: String, required: true },
-      portfolio: { type: [photoSchema], default: [] },
-      gallery: { type: [photoSchema], default: [] },
+    // ── Identity ──────────────────────────────────────────────
+    displayName: { type: String, trim: true, required: true },
+    bio: { type: String, default: "", maxlength: 500 },
+    gender: {
+      type: String,
+      enum: ["Male", "Female", "Other", "Prefer not to say"],
+      default: "Prefer not to say",
     },
+    dateOfBirth: { type: Date, default: null },
+    height: { type: Number, default: null },          // cm
+    interests: { type: [String], default: [] },
 
-    business: {
-      displayName: { type: String, trim: true, required: true },
-      languages: {
-        type: [String],
-        default: ["English"],
-        validate: {
-          validator: (arr) => Array.isArray(arr) && arr.length >= 1,
-          message: "Select at least one language",
-        },
-      },
-      email: { type: String, trim: true, lowercase: true, required: true },
-      mobile: { type: String, trim: true, required: true },
+    // ── Category ──────────────────────────────────────────────
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
     },
-
-    location: {
-      city: { type: String, trim: true, required: true },
-      state: { type: String, trim: true },
-      country: { type: String, trim: true, default: "India" },
-      address: { type: String, default: "" },
-      geo: {
-        type: { type: String, enum: ["Point"], default: "Point" },
-        coordinates: { type: [Number], default: undefined },
-      },
-    },
-
     expertise: {
-      categories: { type: [String], default: [] },
-      // subcategories: { type: [String], default: [] },
-      areas: {
-        type: [String],
-        default: [],
-        validate: {
-          validator: (arr) => Array.isArray(arr) && arr.length >= 1,
-          message: "Add at least one area of expertise",
-        },
-      },
+      areas: { type: [String], default: [] },
       skills: { type: [String], default: [] },
-      industries: { type: [String], default: [] },
-      tags: { type: [String], default: [] },
     },
+    experience: { years: { type: Number, min: 0, default: 0 } },
 
-    experience: {
-      years: { type: Number, min: 0, max: 60, required: true },
-      clients: {
-        total: { type: Number, min: 0, default: 0 },
-        notable: { type: [clientSchema], default: [] },
-      },
-    },
+    // ── Contact / Business ────────────────────────────────────
+    email: { type: String, trim: true, lowercase: true },
+    mobile: { type: String, trim: true },
+    city: { type: String, trim: true, default: "" },
+    state: { type: String, trim: true, default: "" },
+    country: { type: String, default: "India" },
+    languages: { type: [String], default: ["English"] },
 
-    descriptions: {
-      short: { type: String, default: "" },
-      detailed: { type: String, default: "" },
-    },
+    // ── Pricing ───────────────────────────────────────────────
+    hourlyRate: { type: Number, min: 0, default: 0 },
 
-    kyc: { type: kycSchema, default: {} },
+    // ── Media (8 photos + 1 video) ────────────────────────────
+    profilePhoto: { type: String, default: "" },     // main photo
+    photos: { type: [photoSchema], default: [], validate: { validator: a => a.length <= 8, message: "Max 8 photos" } },
+    videoUrl: { type: String, default: "" },
 
-    bankDetails: { type: bankSchema, default: {} },
-
+    // ── Social ────────────────────────────────────────────────
     social: {
       website: { type: String, default: "" },
-      linkedin: { type: String, default: "" },
-      twitter: { type: String, default: "" },
       instagram: { type: String, default: "" },
+      linkedin: { type: String, default: "" },
     },
-    profilestatus: {
-      type: Boolean,
-      default: false,
+
+    // ── KYC & Bank ───────────────────────────────────────────
+    kyc: { type: kycSchema, default: {} },
+    bankDetails: { type: bankSchema, default: {} },
+
+    // ── Admin approval ────────────────────────────────────────
+    approvalStatus: {
+      type: String,
+      enum: ["pending", "active", "rejected"],
+      default: "pending",
+      index: true,
     },
+    rejectionReason: { type: String, default: "" },
+
+    // ── Seller on/off toggle ──────────────────────────────────
+    profilestatus: { type: Boolean, default: true },
+
+    // ── Stats ─────────────────────────────────────────────────
+    viewCount: { type: Number, default: 0 },
+    likeCount: { type: Number, default: 0 },
+    averageRating: { type: Number, default: 0, min: 0, max: 5 },
+    reviewCount: { type: Number, default: 0 },
+
+    termsAccepted: { type: Boolean, default: false },
   },
   { versionKey: false, timestamps: true }
 );

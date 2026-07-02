@@ -4,19 +4,10 @@ const path = require("path");
 const fs = require("fs");
 
 const {
-  createDatingProfile,
-  updateDatingProfile,
-  getDatingProfileById,
-  getMyDatingProfile,
-  deleteDatingProfile,
-  getAllProfile,
-  getProfilesByAreaExceptUser,
-  getProfilesByCategory,
-  updateBankDetails,
-  updateKycDetails,
-  getProfileByUserAndId,
-  getProfileByUserId,
-  toggleProfileStatus,
+  createProfile, updateProfile, getProfileById, getMyProfile,
+  deleteProfile, getAllProfile, toggleProfileStatus,
+  updateBankDetails, updateKycDetails, getProfileByUserId,
+  discoverProfiles, getCategories,
 } = require("../../Controller/Auth/Profile");
 
 const router = express.Router();
@@ -33,58 +24,43 @@ const storage = multer.diskStorage({
   },
 });
 
+const ALLOWED_IMAGE = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+const ALLOWED_VIDEO = ["video/mp4", "video/quicktime", "video/x-msvideo"];
+
 const fileFilter = (_req, file, cb) => {
-  if (file?.mimetype?.startsWith("image/")) return cb(null, true);
-  return cb(new Error("Only image files are allowed"), false);
+  if (ALLOWED_IMAGE.includes(file.mimetype) || ALLOWED_VIDEO.includes(file.mimetype))
+    return cb(null, true);
+  return cb(new Error("Only images or videos allowed"), false);
 };
 
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 6 * 1024 * 1024, files: 25 },
-});
+const upload = multer({ storage, fileFilter, limits: { fileSize: 50 * 1024 * 1024, files: 10 } });
 
-router.post(
-  "/addprofile",
-  upload.fields([
-    { name: "profilePhoto", maxCount: 1 },
-    { name: "portfolio", maxCount: 12 },
-    { name: "gallery", maxCount: 12 },
-  ]),
-  createDatingProfile
-);
+const profileUpload = upload.fields([
+  { name: "profilePhoto", maxCount: 1 },
+  { name: "photos", maxCount: 8 },
+  { name: "video", maxCount: 1 },
+]);
 
-router.put(
-  "/editprofiles",
-  upload.fields([
-    { name: "profilePhoto", maxCount: 1 },
-    { name: "portfolio", maxCount: 12 },
-    { name: "gallery", maxCount: 12 },
-  ]),
-  updateDatingProfile
-);
+const kycUpload = upload.fields([
+  { name: "panImage", maxCount: 1 },
+  { name: "aadhaarFront", maxCount: 1 },
+  { name: "aadhaarBack", maxCount: 1 },
+]);
 
-router.get("/get-profile-by-id/:id", getDatingProfileById);
-router.get("/me/my-profile", getMyDatingProfile);
+// Profile CRUD
+router.post("/addprofile", profileUpload, createProfile);
+router.put("/editprofiles", profileUpload, updateProfile);
+router.get("/discover", discoverProfiles);
 router.get("/all", getAllProfile);
-
-router.delete("/:id", deleteDatingProfile);
-
-router.get("/by-area-except", getProfilesByAreaExceptUser);
-router.get("/by-category", getProfilesByCategory);
-router.patch("/profile/:profileId/bank", updateBankDetails);
-// router.patch("/profile/:profileId/kyc", updateKycDetails);
-router.patch(
-  "/profile/:profileId/kyc",
-  upload.fields([
-    { name: "panImage", maxCount: 1 },
-    { name: "aadhaarFront", maxCount: 1 },
-    { name: "aadhaarBack", maxCount: 1 },
-  ]),
-  updateKycDetails
-);
-router.get("/:profileId/user", getProfileByUserAndId);
+router.get("/categories", getCategories);
+router.get("/me/my-profile", getMyProfile);
+router.get("/get-profile-by-id/:id", getProfileById);
 router.get("/userprofile/:userId", getProfileByUserId);
+router.delete("/:id", deleteProfile);
 router.put("/toggle-status/:profileId", toggleProfileStatus);
+
+// Bank & KYC
+router.patch("/profile/:profileId/bank", updateBankDetails);
+router.patch("/profile/:profileId/kyc", kycUpload, updateKycDetails);
 
 module.exports = router;

@@ -411,8 +411,10 @@ exports.getContactForUserProfile = async (req, res) => {
     const profileIdObj = new mongoose.Types.ObjectId(profileId);
 
     const latest = await Booking.findOne({
-      $or: [{ userId: userIdObj }, { userId }],
-      $or: [{ profileId: profileIdObj }, { profileId }],
+      $and: [
+        { $or: [{ userId: userIdObj }, { userId }] },
+        { $or: [{ profileId: profileIdObj }, { profileId }] },
+      ],
       status: "success",
     })
       .sort({ start: -1 })
@@ -438,7 +440,7 @@ exports.getContactForUserProfile = async (req, res) => {
     const allowed =
       now >= startMs - GRACE_BEFORE_MS && now <= endMs + GRACE_AFTER_MS;
 
-    const until = Math.min(endMs + GRACE_AFTER_MS, endMs);
+    const until = endMs + GRACE_AFTER_MS;
     const unlocksAt = startMs - GRACE_BEFORE_MS;
 
     if (!allowed) {
@@ -453,7 +455,7 @@ exports.getContactForUserProfile = async (req, res) => {
     }
 
     const prof = await Profile.findById(profileIdObj)
-      .select("basics.email basics.mobile basics.fullName")
+      .select("email mobile displayName")
       .lean();
 
     if (!prof) {
@@ -465,10 +467,10 @@ exports.getContactForUserProfile = async (req, res) => {
     return res.status(200).json({
       success: true,
       allowed: true,
-      email: prof?.basics?.email || "",
-      mobile: prof?.basics?.mobile || "",
+      email: prof?.email || "",
+      mobile: prof?.mobile || "",
       until: new Date(endMs).toISOString(),
-      profileName: prof?.basics?.fullName || "User",
+      profileName: prof?.displayName || "User",
     });
   } catch (err) {
     console.error("getContactForUserProfile error", err);

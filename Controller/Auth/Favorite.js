@@ -78,7 +78,7 @@ exports.getMyFavoriteProfiles = async (req, res) => {
 exports.getMyFavoriteProfileIds = async (req, res) => {
   try {
     const id = req.user?.id || req.params?.id;
-    if (!userId) {
+    if (!id) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
@@ -88,7 +88,7 @@ exports.getMyFavoriteProfileIds = async (req, res) => {
         .json({ success: false, message: "Invalid userId" });
     }
 
-    const ids = await FavoriteProfile.find({ id }).distinct("profileId");
+    const ids = await FavoriteProfile.find({ userId: id }).distinct("profileId");
 
     return res.status(200).json({
       success: true,

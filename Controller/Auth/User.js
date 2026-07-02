@@ -225,7 +225,6 @@ exports.resendOTP = async (req, res) => {
 
     return res.status(200).json({
       message: "OTP resent successfully",
-      otp,
     });
   } catch (err) {
     console.error("resendOTP error:", err);
@@ -393,11 +392,11 @@ exports.getSeller = async (req, res) => {
     const seller = await User.find({ role: "seller" });
 
     if (!seller || seller.length === 0) {
-      return res.status(404).json({ message: "No buyers found" });
+      return res.status(404).json({ message: "No sellers found" });
     }
 
     return res.status(200).json({
-      message: "Buyers fetched successfully",
+      message: "Sellers fetched successfully",
       data: seller,
     });
   } catch (err) {
