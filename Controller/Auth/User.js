@@ -153,7 +153,7 @@ exports.verifyOTP = async (req, res) => {
   try {
     const phoneNumber = normalizePhone(req.body.phoneNumber);
     const otpInput = String(req.body.otp || "").trim();
-    const { name, email, role } = req.body;
+    const { name } = req.body;
 
     if (!phoneNumber || !otpInput) {
       return res.status(400).json({ message: "phoneNumber and otp are required" });
@@ -179,15 +179,13 @@ exports.verifyOTP = async (req, res) => {
     let isNewUser = false;
 
     if (!user) {
-      if (!name || !email) {
-        return res.status(400).json({ message: "New user requires name and email" });
+      if (!name) {
+        return res.status(400).json({ message: "Name is required for new users" });
       }
       isNewUser = true;
       user = await User.create({
         phoneNumber,
         name,
-        email,
-        role,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
