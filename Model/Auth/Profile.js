@@ -102,6 +102,7 @@ const profileSchema = new mongoose.Schema(
       index: true,
     },
     rejectionReason: { type: String, default: "" },
+    isVerified: { type: Boolean, default: false },
 
     // ── Seller on/off toggle ──────────────────────────────────
     profilestatus: { type: Boolean, default: true },

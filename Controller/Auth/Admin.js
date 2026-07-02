@@ -160,6 +160,35 @@ exports.rejectProfile = async (req, res) => {
   }
 };
 
+exports.verifyProfile = async (req, res) => {
+  try {
+    const { profileId } = req.params;
+    const profile = await Profile.findById(profileId);
+    if (!profile) return res.status(404).json({ success: false, message: "Profile not found" });
+
+    profile.isVerified = !profile.isVerified;
+    await profile.save();
+
+    if (profile.isVerified) {
+      await Notification.create({
+        userId: profile.userId,
+        type: "profile_approved",
+        title: "Profile Verified ✅",
+        body: "Congratulations! Your profile has been verified and now shows a verified badge.",
+        relatedId: String(profileId),
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      isVerified: profile.isVerified,
+      message: profile.isVerified ? "Profile verified" : "Verification removed",
+    });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
 // ── Category Management ───────────────────────────────────────────────────────
 exports.addCategory = async (req, res) => {
   try {
