@@ -107,6 +107,9 @@ const profileSchema = new mongoose.Schema(
     // ── Seller on/off toggle ──────────────────────────────────
     profilestatus: { type: Boolean, default: true },
 
+    // ── General user access (admin-controlled) ────────────────
+    generalAccess: { type: Boolean, default: false },
+
     // ── Stats ─────────────────────────────────────────────────
     viewCount: { type: Number, default: 0 },
     likeCount: { type: Number, default: 0 },

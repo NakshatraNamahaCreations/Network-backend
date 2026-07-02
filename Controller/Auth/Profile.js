@@ -129,10 +129,23 @@ exports.updateProfile = async (req, res) => {
 exports.discoverProfiles = async (req, res) => {
   try {
     const {
-      userId, gender, category, minAge, maxAge,
+      userId, viewerId, gender, category, minAge, maxAge,
       minPrice, maxPrice, minRating, city,
       sortBy, page = 1, limit = 20,
     } = req.query;
+
+    // Determine if viewer is subscribed (use viewerId if provided, else userId)
+    const checkId = viewerId || userId;
+    let viewerSubscribed = false;
+    if (checkId && mongoose.isValidObjectId(checkId)) {
+      const Subscription = require("../../Model/Auth/Subscription");
+      await Subscription.updateMany(
+        { userId: checkId, status: "active", endDate: { $lt: new Date() } },
+        { status: "expired" }
+      );
+      const sub = await Subscription.findOne({ userId: checkId, status: "active" });
+      viewerSubscribed = !!sub;
+    }
 
     // Get blocked user IDs to exclude
     let excludeUserIds = [];
@@ -148,6 +161,8 @@ exports.discoverProfiles = async (req, res) => {
     const match = {
       approvalStatus: "active",
       profilestatus: true,
+      // Non-subscribers only see profiles admin has enabled for general access
+      ...(!viewerSubscribed && { generalAccess: true }),
       ...(excludeUserIds.length && { userId: { $nin: excludeUserIds } }),
       ...(userId && mongoose.isValidObjectId(userId) && { userId: { $ne: new mongoose.Types.ObjectId(userId), ...(excludeUserIds.length && { $nin: excludeUserIds }) } }),
     };
@@ -276,6 +291,19 @@ exports.toggleProfileStatus = async (req, res) => {
     profile.profilestatus = !profile.profilestatus;
     await profile.save();
     return res.status(200).json({ success: true, profilestatus: profile.profilestatus });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+exports.toggleGeneralAccess = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const profile = await Profile.findById(id);
+    if (!profile) return res.status(404).json({ error: "Profile not found" });
+    profile.generalAccess = !profile.generalAccess;
+    await profile.save();
+    return res.status(200).json({ success: true, generalAccess: profile.generalAccess });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

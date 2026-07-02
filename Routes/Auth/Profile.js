@@ -7,7 +7,7 @@ const {
   createProfile, updateProfile, getProfileById, getMyProfile,
   deleteProfile, getAllProfile, toggleProfileStatus,
   updateBankDetails, updateKycDetails, getProfileByUserId,
-  discoverProfiles, getCategories,
+  discoverProfiles, getCategories, toggleGeneralAccess,
 } = require("../../Controller/Auth/Profile");
 
 const router = express.Router();
@@ -58,6 +58,7 @@ router.get("/get-profile-by-id/:id", getProfileById);
 router.get("/userprofile/:userId", getProfileByUserId);
 router.delete("/:id", deleteProfile);
 router.put("/toggle-status/:profileId", toggleProfileStatus);
+router.patch("/:id/general-access", toggleGeneralAccess);
 
 // Bank & KYC
 router.patch("/profile/:profileId/bank", updateBankDetails);
