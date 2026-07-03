@@ -25,10 +25,25 @@ exports.blockUser = async (req, res) => {
 exports.getMyBlocked = async (req, res) => {
   try {
     const { userId } = req.params;
-    const blocked = await Block.find({ blockerId: userId })
-      .populate("blockedUserId", "name profileImage")
+    const Profile = require("../../Model/Auth/Profile");
+
+    const blocked = await Block.find({ blockerId: userId }).lean();
+    const blockedUserIds = blocked.map(b => b.blockedUserId);
+
+    const profiles = await Profile.find({ userId: { $in: blockedUserIds } })
+      .populate("category", "name")
+      .select("userId displayName profilePhoto city category")
       .lean();
-    return res.status(200).json({ success: true, blocked });
+
+    const profileMap = {};
+    profiles.forEach(p => { profileMap[String(p.userId)] = p; });
+
+    const result = blocked.map(b => ({
+      ...b,
+      profile: profileMap[String(b.blockedUserId)] || null,
+    }));
+
+    return res.status(200).json({ success: true, blocked: result });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
