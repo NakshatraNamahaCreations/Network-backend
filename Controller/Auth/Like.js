@@ -31,11 +31,12 @@ exports.likeProfile = async (req, res) => {
 
     // In-app notification to profile owner
     const liker = await User.findById(fromUserId).select("name profileImage").lean();
+    const likerName = liker?.name || "Someone";
     await Notification.create({
       userId: profile.userId,
       type: "like",
-      title: "Someone liked your profile! ❤️",
-      body: `${liker?.name || "Someone"} liked your profile`,
+      title: `${likerName} liked your profile! ❤️`,
+      body: `${likerName} liked your profile`,
       relatedId: String(fromUserId),
       senderName: liker?.name || "",
       senderPhoto: liker?.profileImage || "",
