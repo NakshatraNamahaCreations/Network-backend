@@ -34,6 +34,16 @@ exports.markOneRead = async (req, res) => {
   }
 };
 
+exports.getUnreadCount = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const unreadCount = await Notification.countDocuments({ userId, isRead: false });
+    return res.status(200).json({ success: true, unreadCount });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 exports.deleteNotification = async (req, res) => {
   try {
     const { id } = req.params;
