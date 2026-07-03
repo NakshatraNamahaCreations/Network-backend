@@ -95,8 +95,15 @@ exports.getPendingProfiles = async (req, res) => {
 
 exports.getAllProfilesAdmin = async (req, res) => {
   try {
-    const { approvalStatus, page = 1, limit = 20 } = req.query;
-    const filter = approvalStatus ? { approvalStatus } : {};
+    const { approvalStatus, profilestatus, search, page = 1, limit = 20 } = req.query;
+    const filter = {};
+    if (approvalStatus) filter.approvalStatus = approvalStatus;
+    if (profilestatus === "true")  filter.profilestatus = true;
+    if (profilestatus === "false") filter.profilestatus = false;
+    if (search) {
+      const rx = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      filter.$or = [{ displayName: rx }, { city: rx }, { mobile: rx }];
+    }
     const skip = (Number(page) - 1) * Number(limit);
     const [profiles, total] = await Promise.all([
       Profile.find(filter)
