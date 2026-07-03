@@ -178,9 +178,21 @@ exports.discoverProfiles = async (req, res) => {
     if (minRating != null) match.averageRating = { $gte: Number(minRating) };
     if (minAge != null || maxAge != null) {
       const now = new Date();
-      match.dateOfBirth = {};
-      if (maxAge != null) { const d = new Date(now); d.setFullYear(d.getFullYear() - Number(maxAge)); match.dateOfBirth.$gte = d; }
-      if (minAge != null) { const d = new Date(now); d.setFullYear(d.getFullYear() - Number(minAge)); match.dateOfBirth.$lte = d; }
+      const dobCond = {};
+      // maxAge: oldest birth date = now - (maxAge+1) years (to include full year boundary)
+      if (maxAge != null) { const d = new Date(now); d.setFullYear(d.getFullYear() - Number(maxAge) - 1); dobCond.$gte = d; }
+      // minAge: youngest birth date = now - minAge years
+      if (minAge != null) { const d = new Date(now); d.setFullYear(d.getFullYear() - Number(minAge)); dobCond.$lte = d; }
+      // Include profiles where dateOfBirth is set and in range,
+      // OR where dateOfBirth is not provided (can't determine age)
+      const ageCond = { $or: [{ dateOfBirth: null }, { dateOfBirth: dobCond }] };
+      if (match.$or) {
+        // query filter already uses $or — combine with $and to avoid conflict
+        match.$and = [{ $or: match.$or }, ageCond];
+        delete match.$or;
+      } else {
+        match.$or = ageCond.$or;
+      }
     }
 
     const sortMap = {
