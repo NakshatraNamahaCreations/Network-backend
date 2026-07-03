@@ -98,7 +98,7 @@ const profileSchema = new mongoose.Schema(
     approvalStatus: {
       type: String,
       enum: ["pending", "active", "rejected"],
-      default: "pending",
+      default: "active",
       index: true,
     },
     rejectionReason: { type: String, default: "" },
@@ -108,7 +108,7 @@ const profileSchema = new mongoose.Schema(
     profilestatus: { type: Boolean, default: true },
 
     // ── General user access (admin-controlled) ────────────────
-    generalAccess: { type: Boolean, default: false },
+    generalAccess: { type: Boolean, default: true },
 
     // ── Stats ─────────────────────────────────────────────────
     viewCount: { type: Number, default: 0 },

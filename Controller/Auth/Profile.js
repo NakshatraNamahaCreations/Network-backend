@@ -66,7 +66,8 @@ exports.createProfile = async (req, res) => {
       photos: photoFiles.slice(0, 8).map(f => ({ url: toWebPath(f) })),
       videoUrl: videoFile ? toWebPath(videoFile) : "",
       termsAccepted: termsAccepted === "true" || termsAccepted === true,
-      approvalStatus: "pending",
+      approvalStatus: "active",
+      generalAccess: true,
       social: {
         instagram: socialInstagram || "",
         linkedin:  socialLinkedin  || "",
@@ -75,7 +76,7 @@ exports.createProfile = async (req, res) => {
     });
 
     await profile.populate("category", "name icon");
-    return res.status(201).json({ success: true, message: "Profile submitted for approval", profile });
+    return res.status(201).json({ success: true, message: "Profile created successfully", profile });
   } catch (err) {
     console.error("createProfile error:", err);
     return res.status(500).json({ success: false, error: err.message });
@@ -140,22 +141,9 @@ exports.discoverProfiles = async (req, res) => {
   try {
     const {
       userId, viewerId, gender, category, minAge, maxAge,
-      minPrice, maxPrice, minRating, city,
+      minPrice, maxPrice, minRating, city, query,
       sortBy, page = 1, limit = 20,
     } = req.query;
-
-    // Determine if viewer is subscribed (use viewerId if provided, else userId)
-    const checkId = viewerId || userId;
-    let viewerSubscribed = false;
-    if (checkId && mongoose.isValidObjectId(checkId)) {
-      const Subscription = require("../../Model/Auth/Subscription");
-      await Subscription.updateMany(
-        { userId: checkId, status: "active", endDate: { $lt: new Date() } },
-        { status: "expired" }
-      );
-      const sub = await Subscription.findOne({ userId: checkId, status: "active" });
-      viewerSubscribed = !!sub;
-    }
 
     // Get blocked user IDs to exclude
     let excludeUserIds = [];
@@ -171,14 +159,16 @@ exports.discoverProfiles = async (req, res) => {
     const match = {
       approvalStatus: "active",
       profilestatus: true,
-      // Non-subscribers only see profiles admin has enabled for general access
-      ...(!viewerSubscribed && { generalAccess: true }),
       ...(excludeUserIds.length && { userId: { $nin: excludeUserIds } }),
       ...(userId && mongoose.isValidObjectId(userId) && { userId: { $ne: new mongoose.Types.ObjectId(userId), ...(excludeUserIds.length && { $nin: excludeUserIds }) } }),
     };
 
     if (gender) match.gender = gender;
-    if (city) match.city = new RegExp(`^${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
+    if (city) match.city = new RegExp(city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    if (query) {
+      const rx = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      match.$or = [{ displayName: rx }, { city: rx }, { bio: rx }];
+    }
     if (category && mongoose.isValidObjectId(category)) match.category = new mongoose.Types.ObjectId(category);
     if (minPrice != null || maxPrice != null) {
       match.hourlyRate = {};
@@ -231,26 +221,7 @@ exports.getProfileById = async (req, res) => {
 
     await Profile.findByIdAndUpdate(id, { $inc: { viewCount: 1 } });
 
-    // Check if the viewer has an active subscription
-    let isSubscribed = false;
-    if (viewerId && mongoose.isValidObjectId(viewerId)) {
-      const Subscription = require("../../Model/Auth/Subscription");
-      await Subscription.updateMany(
-        { userId: viewerId, status: "active", endDate: { $lt: new Date() } },
-        { status: "expired" }
-      );
-      const sub = await Subscription.findOne({ userId: viewerId, status: "active" });
-      isSubscribed = !!sub;
-    }
-
-    // Strip contact fields for non-subscribers
-    const data = profile.toObject();
-    if (!isSubscribed) {
-      delete data.mobile;
-      delete data.email;
-    }
-
-    return res.status(200).json({ profile: data, isSubscribed });
+    return res.status(200).json({ profile: profile.toObject() });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
