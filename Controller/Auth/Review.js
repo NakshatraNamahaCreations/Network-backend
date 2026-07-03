@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const Review = require("../../Model/Auth/Review");
 const Profile = require("../../Model/Auth/Profile");
+const User = require("../../Model/Auth/User");
+const Notification = require("../../Model/Auth/Notification");
 
 async function recalcRating(profileId) {
   const result = await Review.aggregate([
@@ -46,6 +48,27 @@ exports.addReview = async (req, res) => {
     );
 
     await recalcRating(profileId);
+
+    // Notify profile owner
+    try {
+      const profile = await Profile.findById(profileId).select("userId displayName").lean();
+      if (profile?.userId && String(profile.userId) !== String(reviewerId)) {
+        const reviewer = await User.findById(reviewerId).select("name").lean();
+        const stars = "★".repeat(ratingNum) + "☆".repeat(5 - ratingNum);
+        const reviewerName = reviewer?.name || "Someone";
+        await Notification.create({
+          userId: profile.userId,
+          type: "new_review",
+          title: `New Review ${stars}`,
+          body: comment?.trim()
+            ? `${reviewerName} rated you ${ratingNum}/5 — "${comment.trim().slice(0, 80)}"`
+            : `${reviewerName} rated you ${ratingNum} out of 5 stars.`,
+          relatedId: String(profileId),
+        });
+      }
+    } catch (notifErr) {
+      console.error("Review notification error:", notifErr.message);
+    }
 
     return res.status(200).json({ success: true, review });
   } catch (err) {
