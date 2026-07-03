@@ -3,7 +3,8 @@ const Profile = require("../../Model/Auth/Profile");
 const Block = require("../../Model/Auth/Block");
 const { CATEGORIES } = require("../../utills/categories");
 
-const toWebPath = (f) => `/${String(f.path).replace(/\\/g, "/")}`;
+// Cloudinary storage puts the secure_url in file.path
+const toWebPath = (f) => f.path;
 
 // ── Create Profile ───────────────────────────────────────────────────────────
 exports.createProfile = async (req, res) => {
