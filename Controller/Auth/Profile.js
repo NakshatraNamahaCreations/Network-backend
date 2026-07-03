@@ -19,6 +19,7 @@ exports.createProfile = async (req, res) => {
       displayName, bio, gender, dateOfBirth, height,
       email, mobile, city, state, country, languages,
       hourlyRate, category, termsAccepted,
+      socialInstagram, socialLinkedin, socialWebsite,
     } = req.body;
 
     if (!displayName) return res.status(400).json({ success: false, error: "Display name required" });
@@ -65,6 +66,11 @@ exports.createProfile = async (req, res) => {
       videoUrl: videoFile ? toWebPath(videoFile) : "",
       termsAccepted: termsAccepted === "true" || termsAccepted === true,
       approvalStatus: "pending",
+      social: {
+        instagram: socialInstagram || "",
+        linkedin:  socialLinkedin  || "",
+        website:   socialWebsite   || "",
+      },
     });
 
     await profile.populate("category", "name icon");
@@ -89,6 +95,9 @@ exports.updateProfile = async (req, res) => {
     for (const f of fields) {
       if (req.body[f] != null) $set[f] = req.body[f];
     }
+    if (req.body.socialInstagram != null) $set["social.instagram"] = req.body.socialInstagram;
+    if (req.body.socialLinkedin  != null) $set["social.linkedin"]  = req.body.socialLinkedin;
+    if (req.body.socialWebsite   != null) $set["social.website"]   = req.body.socialWebsite;
     if (req.body.dateOfBirth) $set.dateOfBirth = new Date(req.body.dateOfBirth);
     if (req.body.height) $set.height = Number(req.body.height);
     if (req.body.interests) {
