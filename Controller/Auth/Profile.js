@@ -19,7 +19,7 @@ exports.createProfile = async (req, res) => {
     const {
       displayName, bio, gender, dateOfBirth, height,
       email, mobile, city, state, country, languages,
-      hourlyRate, category, termsAccepted,
+      hourlyRate, category, subcategory, termsAccepted,
       socialInstagram, socialLinkedin, socialWebsite,
     } = req.body;
 
@@ -59,6 +59,7 @@ exports.createProfile = async (req, res) => {
       languages: languagesParsed,
       hourlyRate: hourlyRate ? Number(hourlyRate) : 0,
       category: category && mongoose.isValidObjectId(category) ? category : null,
+      subcategory: subcategory && mongoose.isValidObjectId(subcategory) ? subcategory : null,
       interests,
       expertise,
       experience: { years: req.body.experienceYears ? Number(req.body.experienceYears) : 0 },
@@ -76,6 +77,7 @@ exports.createProfile = async (req, res) => {
     });
 
     await profile.populate("category", "name icon");
+    await profile.populate("subcategory", "name icon");
     return res.status(201).json({ success: true, message: "Profile created successfully", profile });
   } catch (err) {
     console.error("createProfile error:", err);
@@ -93,7 +95,7 @@ exports.updateProfile = async (req, res) => {
     if (!existing) return res.status(404).json({ success: false, error: "Profile not found" });
 
     const $set = {};
-    const fields = ["displayName","bio","gender","email","mobile","city","state","country","hourlyRate","category"];
+    const fields = ["displayName","bio","gender","email","mobile","city","state","country","hourlyRate","category","subcategory"];
     for (const f of fields) {
       if (req.body[f] != null) $set[f] = req.body[f];
     }
@@ -128,7 +130,9 @@ exports.updateProfile = async (req, res) => {
       $set.photos = [...kept, ...newPhotos].slice(0, 8);
     }
 
-    const profile = await Profile.findOneAndUpdate({ userId }, { $set }, { new: true }).populate("category", "name icon");
+    const profile = await Profile.findOneAndUpdate({ userId }, { $set }, { new: true })
+      .populate("category", "name icon")
+      .populate("subcategory", "name icon");
     return res.status(200).json({ success: true, message: "Profile updated", profile });
   } catch (err) {
     console.error("updateProfile error:", err);
@@ -140,7 +144,7 @@ exports.updateProfile = async (req, res) => {
 exports.discoverProfiles = async (req, res) => {
   try {
     const {
-      userId, viewerId, gender, category, minAge, maxAge,
+      userId, viewerId, gender, category, subcategory, minAge, maxAge,
       minPrice, maxPrice, minRating, city, query,
       sortBy, page = 1, limit = 20,
     } = req.query;
@@ -170,6 +174,7 @@ exports.discoverProfiles = async (req, res) => {
       match.$or = [{ displayName: rx }, { city: rx }, { bio: rx }];
     }
     if (category && mongoose.isValidObjectId(category)) match.category = new mongoose.Types.ObjectId(category);
+    if (subcategory && mongoose.isValidObjectId(subcategory)) match.subcategory = new mongoose.Types.ObjectId(subcategory);
     if (minPrice != null || maxPrice != null) {
       match.hourlyRate = {};
       if (minPrice != null) match.hourlyRate.$gte = Number(minPrice);
@@ -204,7 +209,9 @@ exports.discoverProfiles = async (req, res) => {
 
     const [profiles, total] = await Promise.all([
       Profile.find(match).sort(sort).skip(skip).limit(Number(limit))
-        .populate("category", "name icon").lean(),
+        .populate("category", "name icon")
+        .populate("subcategory", "name icon")
+        .lean(),
       Profile.countDocuments(match),
     ]);
 
@@ -228,7 +235,7 @@ exports.getProfileById = async (req, res) => {
     if (!mongoose.isValidObjectId(id))
       return res.status(400).json({ error: "Invalid id" });
 
-    const profile = await Profile.findById(id).populate("category", "name icon");
+    const profile = await Profile.findById(id).populate("category", "name icon").populate("subcategory", "name icon");
     if (!profile) return res.status(404).json({ error: "Profile not found" });
 
     await Profile.findByIdAndUpdate(id, { $inc: { viewCount: 1 } });
@@ -244,7 +251,7 @@ exports.getProfileByUserId = async (req, res) => {
     const { userId } = req.params;
     if (!mongoose.isValidObjectId(userId))
       return res.status(400).json({ error: "Invalid userId" });
-    const profile = await Profile.findOne({ userId }).populate("category", "name icon");
+    const profile = await Profile.findOne({ userId }).populate("category", "name icon").populate("subcategory", "name icon");
     if (!profile) return res.status(404).json({ error: "Profile not found" });
     return res.status(200).json(profile);
   } catch (err) {
@@ -256,7 +263,7 @@ exports.getMyProfile = async (req, res) => {
   try {
     const userId = req.body?.userId || req.query?.userId;
     if (!userId) return res.status(401).json({ error: "userId required" });
-    const profile = await Profile.findOne({ userId }).populate("category", "name icon");
+    const profile = await Profile.findOne({ userId }).populate("category", "name icon").populate("subcategory", "name icon");
     if (!profile) return res.status(404).json({ error: "Profile not found" });
     return res.status(200).json(profile);
   } catch (err) {
@@ -351,7 +358,7 @@ exports.updateDatingProfile = exports.updateProfile;
 exports.getDatingProfileById = exports.getProfileById;
 exports.getAllProfile = async (_req, res) => {
   try {
-    const profiles = await Profile.find({ approvalStatus: "active" }).sort({ createdAt: -1 }).populate("category", "name icon");
+    const profiles = await Profile.find({ approvalStatus: "active" }).sort({ createdAt: -1 }).populate("category", "name icon").populate("subcategory", "name icon");
     return res.status(200).json(profiles);
   } catch (err) {
     return res.status(500).json({ error: err.message });

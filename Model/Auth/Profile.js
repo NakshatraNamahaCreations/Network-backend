@@ -61,6 +61,11 @@ const profileSchema = new mongoose.Schema(
       ref: "Category",
       default: null,
     },
+    subcategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Subcategory",
+      default: null,
+    },
     expertise: {
       areas: { type: [String], default: [] },
       skills: { type: [String], default: [] },
