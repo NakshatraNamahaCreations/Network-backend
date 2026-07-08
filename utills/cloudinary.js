@@ -32,4 +32,13 @@ const kycStorage = new CloudinaryStorage({
   },
 });
 
-module.exports = { cloudinary, profileStorage, kycStorage };
+const generalStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "sell-your-time/general",
+    resource_type: "image",
+    transformation: [{ quality: "auto:good", fetch_format: "auto" }],
+  },
+});
+
+module.exports = { cloudinary, profileStorage, kycStorage, generalStorage };

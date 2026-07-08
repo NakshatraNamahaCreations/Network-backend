@@ -1,4 +1,6 @@
 const express = require("express");
+const multer = require("multer");
+const { generalStorage } = require("../../utills/cloudinary");
 const {
   AdminUserSignup, AdminUserSignin, AdmingetAlluser, getDashboardStats,
   getPendingProfiles, getAllProfilesAdmin, approveProfile, rejectProfile, verifyProfile,
@@ -8,6 +10,7 @@ const {
 } = require("../../Controller/Auth/Admin");
 
 const router = express.Router();
+const upload = multer({ storage: generalStorage });
 
 // Auth
 router.post("/signup", AdminUserSignup);
@@ -29,8 +32,8 @@ router.put("/profiles/:profileId/toggle-status", toggleProfileStatus);
 
 // Categories
 router.get("/categories", getAllCategories);
-router.post("/categories", addCategory);
-router.put("/categories/:id", updateCategory);
+router.post("/categories", upload.single("image"), addCategory);
+router.put("/categories/:id", upload.single("image"), updateCategory);
 router.delete("/categories/:id", deleteCategory);
 
 // Bookings

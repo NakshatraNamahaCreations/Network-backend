@@ -4,6 +4,7 @@ const subcategorySchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     icon: { type: String, default: "" },
+    imageUrl: { type: String, default: "" },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",

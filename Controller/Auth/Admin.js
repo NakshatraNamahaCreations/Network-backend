@@ -232,7 +232,8 @@ exports.addCategory = async (req, res) => {
     if (!name) return res.status(400).json({ success: false, message: "Name required" });
     const existing = await Category.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, "i") } });
     if (existing) return res.status(400).json({ success: false, message: "Category already exists" });
-    const cat = await Category.create({ name: name.trim(), icon: icon || "", sortOrder: sortOrder || 0 });
+    const imageUrl = req.file?.path || "";
+    const cat = await Category.create({ name: name.trim(), icon: icon || "", imageUrl, sortOrder: sortOrder || 0 });
     return res.status(201).json({ success: true, category: cat });
   } catch (e) {
     return res.status(500).json({ success: false, message: e.message });
@@ -251,7 +252,9 @@ exports.getAllCategories = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const cat = await Category.findByIdAndUpdate(id, req.body, { new: true });
+    const update = { ...req.body };
+    if (req.file?.path) update.imageUrl = req.file.path;
+    const cat = await Category.findByIdAndUpdate(id, update, { new: true });
     if (!cat) return res.status(404).json({ success: false, message: "Not found" });
     return res.status(200).json({ success: true, category: cat });
   } catch (e) {

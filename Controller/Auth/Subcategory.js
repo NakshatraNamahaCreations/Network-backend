@@ -5,8 +5,9 @@ exports.addSubcategory = async (req, res) => {
     const { name, icon, category, sortOrder } = req.body;
     if (!name || !category)
       return res.status(400).json({ success: false, message: "Name and category are required" });
+    const imageUrl = req.file?.path || "";
     const sub = await Subcategory.create({
-      name: name.trim(), icon: icon || "", category, sortOrder: sortOrder || 0,
+      name: name.trim(), icon: icon || "", imageUrl, category, sortOrder: sortOrder || 0,
     });
     return res.status(201).json({ success: true, subcategory: sub });
   } catch (err) {
@@ -35,16 +36,14 @@ exports.updateSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, icon, isActive, sortOrder } = req.body;
-    const sub = await Subcategory.findByIdAndUpdate(
-      id,
-      {
-        ...(name !== undefined && { name }),
-        ...(icon !== undefined && { icon }),
-        ...(isActive !== undefined && { isActive }),
-        ...(sortOrder !== undefined && { sortOrder }),
-      },
-      { new: true }
-    );
+    const update = {
+      ...(name !== undefined && { name }),
+      ...(icon !== undefined && { icon }),
+      ...(isActive !== undefined && { isActive }),
+      ...(sortOrder !== undefined && { sortOrder }),
+    };
+    if (req.file?.path) update.imageUrl = req.file.path;
+    const sub = await Subcategory.findByIdAndUpdate(id, update, { new: true });
     if (!sub) return res.status(404).json({ success: false, message: "Subcategory not found" });
     return res.status(200).json({ success: true, subcategory: sub });
   } catch (err) {
