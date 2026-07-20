@@ -23,6 +23,9 @@ const {
   getBuyers,
   toggleProfileStatus,
   getSeller,
+  softDeleteAccount,
+  restoreAccount,
+  getDeletedUsers,
 } = require("../../Controller/Auth/User");
 
 const storage = multer.diskStorage({
@@ -52,5 +55,10 @@ router.post(
   ]),
   updateProfileVerification
 );
+
+// Account deletion (soft delete)
+router.put("/delete/:id", softDeleteAccount);
+router.put("/restore/:id", restoreAccount);
+router.get("/deleted", getDeletedUsers);
 
 module.exports = router;

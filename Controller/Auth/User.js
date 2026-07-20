@@ -190,6 +190,9 @@ exports.verifyOTP = async (req, res) => {
         updatedAt: new Date(),
       });
     } else {
+      if (user.isDeleted) {
+        return res.status(403).json({ message: "This account has been deleted. Please contact support to restore it." });
+      }
       user.updatedAt = new Date();
       await user.save();
     }
@@ -399,6 +402,48 @@ exports.getSeller = async (req, res) => {
     });
   } catch (err) {
     console.error("getBuyers error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.softDeleteAccount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByIdAndUpdate(
+      id,
+      { isDeleted: true, deletedAt: new Date(), updatedAt: new Date() },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json({ message: "Account deleted successfully" });
+  } catch (err) {
+    console.error("softDeleteAccount error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.restoreAccount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByIdAndUpdate(
+      id,
+      { isDeleted: false, deletedAt: null, updatedAt: new Date() },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json({ message: "Account restored successfully", data: user });
+  } catch (err) {
+    console.error("restoreAccount error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.getDeletedUsers = async (req, res) => {
+  try {
+    const users = await User.find({ isDeleted: true }).sort({ deletedAt: -1 });
+    return res.status(200).json({ message: "Deleted users fetched", data: users });
+  } catch (err) {
+    console.error("getDeletedUsers error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
