@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const SimpleBooking = require("../../Model/Auth/SimpleBooking");
+const Notification  = require("../../Model/Auth/Notification");
+const Profile       = require("../../Model/Auth/Profile");
 
 exports.createBooking = async (req, res) => {
   try {
@@ -9,9 +11,30 @@ exports.createBooking = async (req, res) => {
 
     const booking = await SimpleBooking.create({ buyerId, profileId, date, timeSlot, mode: mode || "Online", notes: notes || "" });
     await booking.populate([
-      { path: "profileId", select: "displayName profilePhoto hourlyRate city" },
+      { path: "profileId", select: "displayName profilePhoto hourlyRate city userId" },
       { path: "buyerId",   select: "name phoneNumber" },
     ]);
+
+    // Send in-app notification to the profile owner
+    try {
+      const sellerUserId = booking.profileId?.userId;
+      if (sellerUserId) {
+        const buyerName  = booking.buyerId?.name || "Someone";
+        const dateLabel  = new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+        await Notification.create({
+          userId:      sellerUserId,
+          type:        "booking",
+          title:       "New Booking Request",
+          body:        `${buyerName} booked you for ${dateLabel} (${timeSlot})`,
+          relatedId:   booking._id.toString(),
+          senderName:  buyerName,
+          senderPhoto: "",
+        });
+      }
+    } catch (_) {
+      // Notification failure must not block the booking response
+    }
+
     return res.status(201).json({ success: true, booking });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

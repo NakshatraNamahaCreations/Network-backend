@@ -1,11 +1,11 @@
 const mongoose = require("mongoose");
-const Razorpay  = require("razorpay");
-const crypto    = require("crypto");
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
 const Subscription = require("../../Model/Auth/Subscription");
-const Plan         = require("../../Model/Auth/Plan");
+const Plan = require("../../Model/Auth/Plan");
 
 const razorpay = new Razorpay({
-  key_id:     process.env.RAZORPAY_KEY_ID,
+  key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
@@ -30,23 +30,23 @@ exports.createOrder = async (req, res) => {
 
     const amountPaise = Math.round(plan.price * 100);
     const order = await razorpay.orders.create({
-      amount:   amountPaise,
+      amount: amountPaise,
       currency: "INR",
-      notes:    { userId: String(userId), planId: String(planId) },
+      notes: { userId: String(userId), planId: String(planId) },
     });
 
     return res.status(200).json({
       success: true,
       razorpay: {
-        orderId:  order.id,
-        keyId:    process.env.RAZORPAY_KEY_ID,
-        amount:   amountPaise,
+        orderId: order.id,
+        keyId: process.env.RAZORPAY_KEY_ID,
+        amount: amountPaise,
         currency: "INR",
       },
       plan: {
-        _id:         plan._id,
-        name:        plan.name,
-        price:       plan.price,
+        _id: plan._id,
+        name: plan.name,
+        price: plan.price,
         description: plan.description,
         durationDays: plan.durationDays,
       },
@@ -78,7 +78,7 @@ exports.verifyPayment = async (req, res) => {
       return res.status(404).json({ success: false, message: "Plan not found" });
 
     const startDate = new Date();
-    const endDate   = new Date(startDate.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
+    const endDate = new Date(startDate.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
 
     // Expire any existing active subscriptions
     await Subscription.updateMany({ userId, status: "active" }, { status: "expired" });
@@ -86,18 +86,18 @@ exports.verifyPayment = async (req, res) => {
     const sub = await Subscription.create({
       userId,
       planId,
-      planName:    plan.name,
-      planPrice:   plan.price,
+      planName: plan.name,
+      planPrice: plan.price,
       durationDays: plan.durationDays,
       startDate,
       endDate,
       status: "active",
       payment: {
-        gateway:   "razorpay",
-        orderId:   razorpay_order_id,
+        gateway: "razorpay",
+        orderId: razorpay_order_id,
         paymentId: razorpay_payment_id,
         signature: razorpay_signature,
-        amount:    plan.price,
+        amount: plan.price,
       },
     });
 
@@ -119,18 +119,18 @@ exports.getStatus = async (req, res) => {
     const sub = await Subscription.findOne({ userId, status: "active" });
     if (!sub) return res.status(200).json({ success: true, isSubscribed: false });
 
-    const msLeft   = sub.endDate - new Date();
+    const msLeft = sub.endDate - new Date();
     const daysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
 
     return res.status(200).json({
       success: true,
       isSubscribed: true,
       subscription: {
-        planName:    sub.planName,
-        planPrice:   sub.planPrice,
+        planName: sub.planName,
+        planPrice: sub.planPrice,
         durationDays: sub.durationDays,
-        startDate:   sub.startDate,
-        endDate:     sub.endDate,
+        startDate: sub.startDate,
+        endDate: sub.endDate,
         daysLeft,
       },
     });
