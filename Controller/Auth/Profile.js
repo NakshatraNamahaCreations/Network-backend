@@ -19,7 +19,7 @@ exports.createProfile = async (req, res) => {
     const {
       displayName, bio, gender, dateOfBirth, height,
       email, mobile, city, state, country, languages,
-      hourlyRate, category, subcategory, termsAccepted,
+      hourlyRate, mode, category, subcategory, termsAccepted,
       socialInstagram, socialLinkedin, socialWebsite,
     } = req.body;
 
@@ -58,6 +58,7 @@ exports.createProfile = async (req, res) => {
       country: country || "India",
       languages: languagesParsed,
       hourlyRate: hourlyRate ? Number(hourlyRate) : 0,
+      mode: ['Online', 'Offline', 'Both'].includes(mode) ? mode : 'Both',
       category: category && mongoose.isValidObjectId(category) ? category : null,
       subcategory: subcategory && mongoose.isValidObjectId(subcategory) ? subcategory : null,
       interests,
@@ -95,7 +96,7 @@ exports.updateProfile = async (req, res) => {
     if (!existing) return res.status(404).json({ success: false, error: "Profile not found" });
 
     const $set = {};
-    const fields = ["displayName","bio","gender","email","mobile","city","state","country","hourlyRate","category","subcategory"];
+    const fields = ["displayName","bio","gender","email","mobile","city","state","country","hourlyRate","mode","category","subcategory"];
     for (const f of fields) {
       if (req.body[f] != null) $set[f] = req.body[f];
     }

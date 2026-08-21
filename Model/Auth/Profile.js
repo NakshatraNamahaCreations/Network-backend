@@ -82,6 +82,7 @@ const profileSchema = new mongoose.Schema(
 
     // ── Pricing ───────────────────────────────────────────────
     hourlyRate: { type: Number, min: 0, default: 0 },
+    mode:       { type: String, enum: ['Online', 'Offline', 'Both'], default: 'Both' },
 
     // ── Media (8 photos + 1 video) ────────────────────────────
     profilePhoto: { type: String, default: "" },     // main photo

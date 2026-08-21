@@ -98,9 +98,30 @@ exports.updateBookingStatus = async (req, res) => {
     if (!["pending", "accepted", "rejected", "cancelled"].includes(status))
       return res.status(400).json({ success: false, message: "Invalid status" });
     const booking = await SimpleBooking.findByIdAndUpdate(id, { status }, { new: true })
-      .populate("profileId", "displayName")
+      .populate("profileId", "displayName userId profilePhoto")
       .populate("buyerId", "name phoneNumber");
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+    if (["accepted", "rejected"].includes(status)) {
+      try {
+        const buyerUserId = booking.buyerId?._id;
+        const sellerName  = booking.profileId?.displayName || "The expert";
+        if (buyerUserId) {
+          await Notification.create({
+            userId:      buyerUserId,
+            type:        "booking",
+            title:       status === "accepted" ? "Booking Accepted 🎉" : "Booking Rejected",
+            body:        status === "accepted"
+                           ? `${sellerName} accepted your booking. Get ready!`
+                           : `${sellerName} declined your booking request.`,
+            relatedId:   booking._id.toString(),
+            senderName:  sellerName,
+            senderPhoto: booking.profileId?.profilePhoto || "",
+          });
+        }
+      } catch (_) {}
+    }
+
     return res.status(200).json({ success: true, booking });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

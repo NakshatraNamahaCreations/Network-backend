@@ -45,6 +45,6 @@ mongoose
   .then(() => console.log("✅ Connected to MongoDB"))
   .catch((err) => console.error("❌ MongoDB connection failed:", err));
 
-app.get("/", (_req, res) => res.send("Sell My Tymm API — Running ✅"));
+app.get("/", (_req, res) => res.send("SELL MY TIME API — Running ✅"));
 
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
