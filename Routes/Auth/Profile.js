@@ -46,9 +46,20 @@ const kycUpload = multer({
   { name: "aadhaarBack",  maxCount: 1 },
 ]);
 
+// Multer error wrapper — returns JSON instead of Express default HTML 500
+const withUpload = (uploadMiddleware) => (req, res, next) => {
+  uploadMiddleware(req, res, (err) => {
+    if (err) {
+      console.error("Upload error:", err);
+      return res.status(500).json({ success: false, error: err.message || "File upload failed" });
+    }
+    next();
+  });
+};
+
 // Profile CRUD
-router.post("/addprofile",           profileUpload, createProfile);
-router.put("/editprofiles",          profileUpload, updateProfile);
+router.post("/addprofile",           withUpload(profileUpload), createProfile);
+router.put("/editprofiles",          withUpload(profileUpload), updateProfile);
 router.get("/discover",              discoverProfiles);
 router.get("/all",                   getAllProfile);
 router.get("/categories",            getCategories);
