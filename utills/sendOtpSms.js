@@ -12,9 +12,8 @@ const sendOtpSms = async (mobile, otp) => {
             throw new Error("Mobile number is required");
         }
 
-        // Message must exactly match the STPL approved DLT template
-        // Template: <#> Dear User, Your OTP for login to Ororegen Companies is {#num#}. Please do not share this with anyone nVx5PMpNQBI
-        const message = `<#> Dear User, Your OTP for login to Ororegen Companies is ${otp}. Please do not share this with anyone nVx5PMpNQBI`;
+        // DLT registered template (STPL) — provider adds <#> automatically
+        const message = `Dear User, Your OTP for login to Ororegen Companies is ${otp}. Please do not share this with anyone nVx5PMpNQBI`;
 
         const url = "https://bulksmsplans.com/api/verify";
 
@@ -32,12 +31,10 @@ const sendOtpSms = async (mobile, otp) => {
             timeout: 10000,
         });
 
+        console.log("SMS API response:", JSON.stringify(response.data));
         return response.data;
     } catch (error) {
-        console.error(
-            "SMS sending failed:",
-            error?.response?.data || error.message
-        );
+        console.error("SMS sending failed:", error?.response?.data || error.message);
         throw new Error("Failed to send OTP SMS");
     }
 };
