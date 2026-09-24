@@ -4,6 +4,7 @@ const SMS_CONFIG = {
     apiId: "APIqJtjEDl3147894",
     apiPassword: "COWTmeXv",
     sender: "OROREG",
+    templateId: "",   // ← STPL Template ID inga podu (SmartPing dashboard la irukum)
 };
 
 const sendOtpSms = async (mobile, otp) => {
@@ -12,9 +13,7 @@ const sendOtpSms = async (mobile, otp) => {
             throw new Error("Mobile number is required");
         }
 
-        const message = `	
-Dear User, Your OTP for login to Ororegen Companies is ${otp}. Please do not share this with anyone`;
-
+        const message = `Dear User, Your OTP for login to Ororegen Companies is ${otp}. Please do not share this with anyone nVx5PMpNQBI`;
 
         const url = "https://bulksmsplans.com/api/verify";
 
@@ -27,17 +26,16 @@ Dear User, Your OTP for login to Ororegen Companies is ${otp}. Please do not sha
                 sender: SMS_CONFIG.sender,
                 number: mobile,
                 message,
-                var1: otp || "1245",
+                var1: otp,
+                ...(SMS_CONFIG.templateId && { template_id: SMS_CONFIG.templateId }),
             },
             timeout: 10000,
         });
 
+        console.log("SMS API response:", JSON.stringify(response.data));
         return response.data;
     } catch (error) {
-        console.error(
-            "SMS sending failed:",
-            error?.response?.data || error.message
-        );
+        console.error("SMS sending failed:", error?.response?.data || error.message);
         throw new Error("Failed to send OTP SMS");
     }
 };
