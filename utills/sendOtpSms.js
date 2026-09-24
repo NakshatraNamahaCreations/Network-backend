@@ -12,8 +12,9 @@ const sendOtpSms = async (mobile, otp) => {
             throw new Error("Mobile number is required");
         }
 
-        const message = `	
-Dear User, Your OTP for login to Ororegen Companies is ${otp}. Please do not share this with anyone`;
+        // Message must exactly match the STPL approved DLT template
+        // Template: <#> Dear User, Your OTP for login to Ororegen Companies is {#num#}. Please do not share this with anyone nVx5PMpNQBI
+        const message = `<#> Dear User, Your OTP for login to Ororegen Companies is ${otp}. Please do not share this with anyone nVx5PMpNQBI`;
 
         const url = "https://bulksmsplans.com/api/verify";
 
@@ -26,7 +27,7 @@ Dear User, Your OTP for login to Ororegen Companies is ${otp}. Please do not sha
                 sender: SMS_CONFIG.sender,
                 number: mobile,
                 message,
-                var1: otp || "1245",
+                var1: otp,
             },
             timeout: 10000,
         });

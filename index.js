@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
+const { cloudinary } = require("./utills/cloudinary");
 
 const app = express();
 app.use(express.json());
@@ -47,4 +48,20 @@ mongoose
 
 app.get("/", (_req, res) => res.send("SELL MY TIME API — Running ✅"));
 
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// Cloudinary connectivity check endpoint
+app.get("/cloudinary-check", async (_req, res) => {
+  try {
+    const result = await cloudinary.api.ping();
+    res.json({ ok: true, status: result.status, cloud_name: process.env.CLOUDINARY_CLOUD_NAME });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.error?.message || e.message, cloud_name: process.env.CLOUDINARY_CLOUD_NAME });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`☁️  Cloudinary cloud_name: ${process.env.CLOUDINARY_CLOUD_NAME || "NOT SET"}`);
+  cloudinary.api.ping()
+    .then(() => console.log("✅ Cloudinary connected"))
+    .catch(e => console.error("❌ Cloudinary error:", e?.error?.message || e.message));
+});
