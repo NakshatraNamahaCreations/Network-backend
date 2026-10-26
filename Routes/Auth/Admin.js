@@ -7,7 +7,7 @@ const {
   toggleProfileStatus,
   addCategory, getAllCategories, updateCategory, deleteCategory,
   getAllBookings,
-  createEmployee, getAllEmployees, deleteEmployee,
+  createEmployee, getAllEmployees, updateEmployee, deleteEmployee,
   createQRCode, getAllQRCodes, updateQRCode, deleteQRCode,
 } = require("../../Controller/Auth/Admin");
 
@@ -44,6 +44,7 @@ router.get("/bookings", getAllBookings);
 // Employees
 router.get("/employees", getAllEmployees);
 router.post("/employees", createEmployee);
+router.put("/employees/:id", updateEmployee);
 router.delete("/employees/:id", deleteEmployee);
 
 // QR Codes

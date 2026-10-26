@@ -296,6 +296,21 @@ exports.getAllEmployees = async (req, res) => {
   }
 };
 
+exports.updateEmployee = async (req, res) => {
+  try {
+    const { name, email, mobileNumber } = req.body;
+    const emp = await Employee.findByIdAndUpdate(
+      req.params.id,
+      { name, email, mobileNumber },
+      { new: true }
+    );
+    if (!emp) return res.status(404).json({ success: false, message: "Employee not found" });
+    return res.status(200).json({ success: true, employee: emp });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
 exports.deleteEmployee = async (req, res) => {
   try {
     await Employee.findByIdAndDelete(req.params.id);
