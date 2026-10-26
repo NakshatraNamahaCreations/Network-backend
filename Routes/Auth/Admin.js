@@ -7,6 +7,7 @@ const {
   toggleProfileStatus,
   addCategory, getAllCategories, updateCategory, deleteCategory,
   getAllBookings,
+  createEmployee, getAllEmployees, deleteEmployee,
 } = require("../../Controller/Auth/Admin");
 
 const router = express.Router();
@@ -38,5 +39,10 @@ router.delete("/categories/:id", deleteCategory);
 
 // Bookings
 router.get("/bookings", getAllBookings);
+
+// Employees
+router.get("/employees", getAllEmployees);
+router.post("/employees", createEmployee);
+router.delete("/employees/:id", deleteEmployee);
 
 module.exports = router;

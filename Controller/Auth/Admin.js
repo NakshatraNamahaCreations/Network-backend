@@ -4,6 +4,7 @@ const Profile = require("../../Model/Auth/Profile");
 const Booking = require("../../Model/Auth/Payment");
 const Category = require("../../Model/Auth/Category");
 const Notification = require("../../Model/Auth/Notification");
+const Employee = require("../../Model/Auth/Employee");
 const bcrypt = require("bcrypt");
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -266,6 +267,38 @@ exports.deleteCategory = async (req, res) => {
   try {
     await Category.findByIdAndDelete(req.params.id);
     return res.status(200).json({ success: true, message: "Deleted" });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+// ── Employees ─────────────────────────────────────────────────────────────────
+exports.createEmployee = async (req, res) => {
+  try {
+    const { name, email, mobileNumber } = req.body;
+    if (!name || !email || !mobileNumber)
+      return res.status(400).json({ success: false, message: "Name, email, and mobile number are required" });
+    const emp = new Employee({ name, email, mobileNumber });
+    await emp.save();
+    return res.status(201).json({ success: true, employee: emp });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+exports.getAllEmployees = async (req, res) => {
+  try {
+    const employees = await Employee.find().sort({ createdAt: -1 });
+    return res.status(200).json({ success: true, employees });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+exports.deleteEmployee = async (req, res) => {
+  try {
+    await Employee.findByIdAndDelete(req.params.id);
+    return res.status(200).json({ success: true, message: "Employee deleted" });
   } catch (e) {
     return res.status(500).json({ success: false, message: e.message });
   }
