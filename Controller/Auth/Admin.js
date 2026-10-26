@@ -5,6 +5,7 @@ const Booking = require("../../Model/Auth/Payment");
 const Category = require("../../Model/Auth/Category");
 const Notification = require("../../Model/Auth/Notification");
 const Employee = require("../../Model/Auth/Employee");
+const QRCode = require("../../Model/Auth/QRCode");
 const bcrypt = require("bcrypt");
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -318,6 +319,48 @@ exports.getAllBookings = async (req, res) => {
       Booking.countDocuments(filter),
     ]);
     return res.status(200).json({ success: true, total, bookings });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+// ── QR Codes ──────────────────────────────────────────────────────────────────
+exports.createQRCode = async (req, res) => {
+  try {
+    const { title, link } = req.body;
+    if (!title || !link)
+      return res.status(400).json({ success: false, message: "Title and link are required" });
+    const qr = await QRCode.create({ title, link });
+    return res.status(201).json({ success: true, qr });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+exports.getAllQRCodes = async (req, res) => {
+  try {
+    const qrs = await QRCode.find().sort({ createdAt: -1 });
+    return res.status(200).json({ success: true, qrs });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+exports.updateQRCode = async (req, res) => {
+  try {
+    const { title, link } = req.body;
+    const qr = await QRCode.findByIdAndUpdate(req.params.id, { title, link }, { new: true });
+    if (!qr) return res.status(404).json({ success: false, message: "Not found" });
+    return res.status(200).json({ success: true, qr });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+exports.deleteQRCode = async (req, res) => {
+  try {
+    await QRCode.findByIdAndDelete(req.params.id);
+    return res.status(200).json({ success: true, message: "Deleted" });
   } catch (e) {
     return res.status(500).json({ success: false, message: e.message });
   }

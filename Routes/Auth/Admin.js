@@ -8,6 +8,7 @@ const {
   addCategory, getAllCategories, updateCategory, deleteCategory,
   getAllBookings,
   createEmployee, getAllEmployees, deleteEmployee,
+  createQRCode, getAllQRCodes, updateQRCode, deleteQRCode,
 } = require("../../Controller/Auth/Admin");
 
 const router = express.Router();
@@ -44,5 +45,11 @@ router.get("/bookings", getAllBookings);
 router.get("/employees", getAllEmployees);
 router.post("/employees", createEmployee);
 router.delete("/employees/:id", deleteEmployee);
+
+// QR Codes
+router.get("/qrcodes", getAllQRCodes);
+router.post("/qrcodes", createQRCode);
+router.put("/qrcodes/:id", updateQRCode);
+router.delete("/qrcodes/:id", deleteQRCode);
 
 module.exports = router;
