@@ -296,6 +296,19 @@ exports.getAllEmployees = async (req, res) => {
   }
 };
 
+exports.getEmployeeUsers = async (req, res) => {
+  try {
+    const emp = await Employee.findById(req.params.id);
+    if (!emp) return res.status(404).json({ success: false, message: "Employee not found" });
+    const users = await User.find({ referralCode: emp.referralCode })
+      .select("name phoneNumber email createdAt")
+      .sort({ createdAt: -1 });
+    return res.status(200).json({ success: true, referralCode: emp.referralCode, users });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
 exports.updateEmployee = async (req, res) => {
   try {
     const { name, email, mobileNumber } = req.body;
