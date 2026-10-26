@@ -303,7 +303,17 @@ exports.getEmployeeUsers = async (req, res) => {
     const users = await User.find({ referralCode: emp.referralCode })
       .select("name phoneNumber email createdAt")
       .sort({ createdAt: -1 });
-    return res.status(200).json({ success: true, referralCode: emp.referralCode, users });
+    const userIds = users.map(u => u._id);
+    const profiles = await Profile.find({ userId: { $in: userIds } })
+      .select("userId displayName profilePhoto bio city category hourlyRate")
+      .populate("category", "name");
+    const profileMap = {};
+    profiles.forEach(p => { profileMap[String(p.userId)] = p; });
+    const usersWithProfile = users.map(u => ({
+      ...u.toObject(),
+      profile: profileMap[String(u._id)] || null,
+    }));
+    return res.status(200).json({ success: true, referralCode: emp.referralCode, users: usersWithProfile });
   } catch (e) {
     return res.status(500).json({ success: false, message: e.message });
   }
