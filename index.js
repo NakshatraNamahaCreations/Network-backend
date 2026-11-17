@@ -37,6 +37,7 @@ app.use("/api/subscription", require("./Routes/Auth/Subscription"));
 app.use("/api/subcategory",  require("./Routes/Auth/Subcategory"));
 app.use("/api/banner",       require("./Routes/Auth/Banner"));
 app.use("/api/booking",      require("./Routes/Auth/SimpleBooking"));
+app.use("/api/message",      require("./Routes/Auth/Message"));
 
 const PORT = process.env.CONTENT_PORT || 8080;
 const MONGO_URI = process.env.CONTENT_MONGO_URI;
